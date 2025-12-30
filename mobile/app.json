@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Tapea",
+    "slug": "tapea-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "sdkVersion": "54.0.0",
+    "platforms": ["ios", "android", "web"]
+  }
+}

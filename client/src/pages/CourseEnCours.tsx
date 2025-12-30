@@ -36,6 +36,7 @@ import {
 import driverCarIcon from "@assets/Icone_acpp_-2_copie_1766883461028.png";
 import { ThankYouModal } from "@/components/ThankYouModal";
 import { PaymentResultModal } from "@/components/PaymentResultModal";
+import { clearWatch, watchPosition, type GeoWatchId } from "@/lib/geolocation";
 
 const menuItems = [
   { label: "Accueil", href: "/" },
@@ -122,7 +123,7 @@ export function CourseEnCours() {
   const [driverHeading, setDriverHeading] = useState<number>(0);
   const [driverETA, setDriverETA] = useState<string>("");
   const mapRef = useRef<google.maps.Map | null>(null);
-  const watchIdRef = useRef<number | null>(null);
+  const watchIdRef = useRef<GeoWatchId | null>(null);
   const lastRouteUpdateRef = useRef<number>(0);
   // Stable camera lock: prevents jumping by waiting for first valid driver location
   const hasInitialDriverLock = useRef(false);
@@ -136,14 +137,19 @@ export function CourseEnCours() {
   // Continuous GPS tracking for client - send location to driver
   // This now depends on courseData so it works when order is loaded via API
   useEffect(() => {
-    if (!navigator.geolocation || !courseData) return;
+    if (!courseData) return;
     
     const orderId = courseData.orderId;
     const clientToken = sessionStorage.getItem("clientToken");
     
     console.log("[GPS] Starting location tracking for order:", orderId);
     
-    const watchId = navigator.geolocation.watchPosition(
+    const watchId = watchPosition(
+      { 
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 10000
+      },
       (position) => {
         const newLocation = {
           lat: position.coords.latitude,
@@ -158,11 +164,6 @@ export function CourseEnCours() {
       },
       (error) => {
         console.log("Geolocation error:", error);
-      },
-      { 
-        enableHighAccuracy: true,
-        maximumAge: 2000,
-        timeout: 10000
       }
     );
     
@@ -170,7 +171,7 @@ export function CourseEnCours() {
     
     return () => {
       if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
+        clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
     };
