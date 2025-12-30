@@ -4,6 +4,7 @@ import { GoogleMap } from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check } from "lucide-react";
 import { useGoogleMaps } from "@/hooks/useGoogleMaps";
+import { getCurrentPosition } from "@/lib/geolocation";
 
 import pickupIcon from "@assets/Icone acpp  (3)_1764128777202.png";
 import destinationIcon from "@assets/Icone acpp  (5)_1764128777201.png";
@@ -66,20 +67,16 @@ export function MapPicker() {
   const { isLoaded } = useGoogleMaps();
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setMapCenter({ lat: latitude, lng: longitude });
-          setCurrentCenter({ lat: latitude, lng: longitude });
-        },
-        () => {
-          setMapCenter(defaultCenter);
-          setCurrentCenter(defaultCenter);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-      );
-    }
+    getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 })
+      .then((position) => {
+        const { latitude, longitude } = position.coords;
+        setMapCenter({ lat: latitude, lng: longitude });
+        setCurrentCenter({ lat: latitude, lng: longitude });
+      })
+      .catch(() => {
+        setMapCenter(defaultCenter);
+        setCurrentCenter(defaultCenter);
+      });
   }, []);
 
   useEffect(() => {

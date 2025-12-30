@@ -21,6 +21,7 @@ import iconPaiement from "@assets/6_1764076802813.png";
 import iconDocuments from "@assets/8_1764076802813.png";
 import iconContact from "@assets/10_1764076802814.png";
 import type { Order } from "@shared/schema";
+import { getCurrentPosition } from "@/lib/geolocation";
 
 const defaultCenter = {
   lat: -17.5334,
@@ -126,30 +127,23 @@ function MapComponent() {
     // Demander la localisation seulement si non demandé
     if (!permissionAsked) {
       setPermissionAsked(true);
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            setUserLocation({ lat: latitude, lng: longitude });
-            map.setCenter({ lat: latitude, lng: longitude });
-            map.setZoom(15);
-            console.log("Localisation obtenue:", latitude, longitude);
-          },
-          (error) => {
-            console.log("Localisation refusée ou indisponible:", error.message);
-            // Fallback: utiliser la position par défaut avec le marker personnalisé
-            setUserLocation(defaultCenter);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
-          }
-        );
-      } else {
-        // Si pas de geolocation, utiliser position par défaut
-        setUserLocation(defaultCenter);
-      }
+      getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      })
+        .then((position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          map.setCenter({ lat: latitude, lng: longitude });
+          map.setZoom(15);
+          console.log("Localisation obtenue:", latitude, longitude);
+        })
+        .catch((error) => {
+          console.log("Localisation refusée ou indisponible:", error.message);
+          // Fallback: utiliser la position par défaut avec le marker personnalisé
+          setUserLocation(defaultCenter);
+        });
     }
   }, [permissionAsked]);
 

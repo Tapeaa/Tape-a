@@ -1,12 +1,19 @@
 // Push notification utilities for iOS PWA
+import { isNativePlatform } from "@/lib/native";
 
 // Check if push notifications are supported
 export function isPushSupported(): boolean {
+  if (isNativePlatform()) {
+    return false;
+  }
   return 'serviceWorker' in navigator && 'PushManager' in window;
 }
 
 // Check if running as standalone PWA (required for iOS)
 export function isStandalonePWA(): boolean {
+  if (isNativePlatform()) {
+    return false;
+  }
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     (window.navigator as any).standalone === true
@@ -15,11 +22,17 @@ export function isStandalonePWA(): boolean {
 
 // Check if iOS device
 export function isIOS(): boolean {
+  if (isNativePlatform()) {
+    return false;
+  }
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
 // Register service worker
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (isNativePlatform()) {
+    return null;
+  }
   if (!('serviceWorker' in navigator)) {
     console.log('[SW] Service workers not supported');
     return null;
@@ -71,6 +84,9 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 // Request notification permission
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (isNativePlatform()) {
+    return 'denied';
+  }
   if (!('Notification' in window)) {
     console.log('[PUSH] Notifications not supported');
     return 'denied';
@@ -83,6 +99,9 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
 // Subscribe to push notifications (uses sessionId for authentication)
 export async function subscribeToPush(sessionId: string): Promise<boolean> {
+  if (isNativePlatform()) {
+    return false;
+  }
   try {
     // Get service worker registration
     const registration = await navigator.serviceWorker.ready;
@@ -140,6 +159,9 @@ export async function subscribeToPush(sessionId: string): Promise<boolean> {
 
 // Unsubscribe from push notifications (uses sessionId for authentication)
 export async function unsubscribeFromPush(sessionId: string): Promise<boolean> {
+  if (isNativePlatform()) {
+    return false;
+  }
   try {
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
@@ -163,6 +185,9 @@ export async function unsubscribeFromPush(sessionId: string): Promise<boolean> {
 
 // Check if currently subscribed
 export async function isSubscribedToPush(): Promise<boolean> {
+  if (isNativePlatform()) {
+    return false;
+  }
   try {
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
@@ -174,6 +199,9 @@ export async function isSubscribedToPush(): Promise<boolean> {
 
 // Check push subscription status from server (uses sessionId for authentication)
 export async function checkPushStatus(sessionId: string): Promise<boolean> {
+  if (isNativePlatform()) {
+    return false;
+  }
   try {
     const response = await fetch(`/api/push/status/${sessionId}`);
     if (!response.ok) return false;
@@ -186,6 +214,9 @@ export async function checkPushStatus(sessionId: string): Promise<boolean> {
 
 // Get notification permission status
 export function getNotificationPermission(): NotificationPermission | 'unsupported' {
+  if (isNativePlatform()) {
+    return 'unsupported';
+  }
   if (!('Notification' in window)) {
     return 'unsupported';
   }
