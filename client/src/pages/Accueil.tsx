@@ -21,7 +21,7 @@ import iconPaiement from "@assets/6_1764076802813.png";
 import iconDocuments from "@assets/8_1764076802813.png";
 import iconContact from "@assets/10_1764076802814.png";
 import type { Order } from "@shared/schema";
-import { getCurrentPosition } from "@/lib/geolocation";
+import * as Location from "expo-location";
 
 const defaultCenter = {
   lat: -17.5334,
@@ -127,23 +127,41 @@ function MapComponent() {
     // Demander la localisation seulement si non demandé
     if (!permissionAsked) {
       setPermissionAsked(true);
-      getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      })
-        .then((position) => {
+      const requestLocation = async () => {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== Location.PermissionStatus.GRANTED) {
+            console.log("Localisation refusée ou indisponible: permission refusée");
+            setUserLocation(defaultCenter);
+            return;
+          }
+
+          const servicesEnabled = await Location.hasServicesEnabledAsync();
+          if (!servicesEnabled) {
+            console.log("Localisation refusée ou indisponible: services désactivés");
+            setUserLocation(defaultCenter);
+            return;
+          }
+
+          const position = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+            timeout: 10000,
+            maximumAge: 60000,
+          });
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           map.setCenter({ lat: latitude, lng: longitude });
           map.setZoom(15);
           console.log("Localisation obtenue:", latitude, longitude);
-        })
-        .catch((error) => {
-          console.log("Localisation refusée ou indisponible:", error.message);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Erreur inconnue";
+          console.log("Localisation refusée ou indisponible:", message);
           // Fallback: utiliser la position par défaut avec le marker personnalisé
           setUserLocation(defaultCenter);
-        });
+        }
+      };
+
+      void requestLocation();
     }
   }, [permissionAsked]);
 
