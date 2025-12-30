@@ -33,6 +33,7 @@ import {
 } from "@/lib/socket";
 import { ThankYouModal } from "@/components/ThankYouModal";
 import { PaymentResultModal } from "@/components/PaymentResultModal";
+import { clearWatch, getCurrentPosition, watchPosition, type GeoWatchId } from "@/lib/geolocation";
 
 const menuItems = [
   { label: "Accueil", href: "/chauffeur" },
@@ -98,7 +99,7 @@ export function ChauffeurCourseEnCours() {
   const [isMapReady, setIsMapReady] = useState(false);
   const prevLocationRef = useRef<google.maps.LatLngLiteral | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const watchIdRef = useRef<number | null>(null);
+  const watchIdRef = useRef<GeoWatchId | null>(null);
   const lastRouteUpdateRef = useRef<number>(0);
   const hasInitialDriverLock = useRef(false);
   
@@ -417,11 +418,11 @@ export function ChauffeurCourseEnCours() {
     if (!order || courseStep === "completed") return;
     
     const sessionId = sessionStorage.getItem("driverSessionId");
-    if (!sessionId || !navigator.geolocation) return;
+    if (!sessionId) return;
     
     // Get immediate position first (faster than waiting for watchPosition)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
+    getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 })
+      .then((position) => {
         const newLocation = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
@@ -439,12 +440,15 @@ export function ChauffeurCourseEnCours() {
           0,
           position.coords.speed || undefined
         );
-      },
-      (error) => console.log("[GPS] Immediate position error:", error.message),
-      { enableHighAccuracy: true, timeout: 5000 }
-    );
+      })
+      .catch((error) => console.log("[GPS] Immediate position error:", error.message));
     
-    const watchId = navigator.geolocation.watchPosition(
+    const watchId = watchPosition(
+      { 
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 10000
+      },
       (position) => {
         const newLocation = {
           lat: position.coords.latitude,
@@ -486,11 +490,6 @@ export function ChauffeurCourseEnCours() {
       },
       (error) => {
         console.log("[GPS] Geolocation error:", error.message);
-      },
-      { 
-        enableHighAccuracy: true,
-        maximumAge: 1000,
-        timeout: 10000
       }
     );
     
@@ -498,7 +497,7 @@ export function ChauffeurCourseEnCours() {
     
     return () => {
       if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
+        clearWatch(watchIdRef.current);
       }
     };
   }, [order, courseStep, driverHeading]);

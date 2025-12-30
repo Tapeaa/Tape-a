@@ -47,6 +47,7 @@ import iconCommandes from "@assets/7_1764076802813.png";
 import iconPaiement from "@assets/6_1764076802813.png";
 import iconDocuments from "@assets/8_1764076802813.png";
 import iconContact from "@assets/10_1764076802814.png";
+import { getCurrentPosition } from "@/lib/geolocation";
 
 const defaultCenter = {
   lat: -17.5334,
@@ -154,27 +155,21 @@ function MapComponent({ showRoute, routeOrigin, routeDestination, onRouteCalcula
     setMap(map);
     if (!permissionAsked) {
       setPermissionAsked(true);
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            setUserLocation({ lat: latitude, lng: longitude });
-            map.setCenter({ lat: latitude, lng: longitude });
-            map.setZoom(15);
-          },
-          (error) => {
-            console.log("Localisation refusée ou indisponible:", error.message);
-            setUserLocation(defaultCenter);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
-          }
-        );
-      } else {
-        setUserLocation(defaultCenter);
-      }
+      getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      })
+        .then((position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          map.setCenter({ lat: latitude, lng: longitude });
+          map.setZoom(15);
+        })
+        .catch((error) => {
+          console.log("Localisation refusée ou indisponible:", error.message);
+          setUserLocation(defaultCenter);
+        });
     }
   }, [permissionAsked]);
 
@@ -741,25 +736,21 @@ export function ChauffeurAccueil() {
       
       // Get GPS position and send after acceptance is processed
       setTimeout(() => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              emitDriverLocation(
-                orderId,
-                sid,
-                position.coords.latitude,
-                position.coords.longitude,
-                0,
-                position.coords.speed || undefined
-              );
-              console.log("[GPS] Sent immediate position after order accept");
-            },
-            () => {
-              console.log("[GPS] Could not get immediate position");
-            },
-            { enableHighAccuracy: true, timeout: 5000 }
-          );
-        }
+        getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 })
+          .then((position) => {
+            emitDriverLocation(
+              orderId,
+              sid,
+              position.coords.latitude,
+              position.coords.longitude,
+              0,
+              position.coords.speed || undefined
+            );
+            console.log("[GPS] Sent immediate position after order accept");
+          })
+          .catch(() => {
+            console.log("[GPS] Could not get immediate position");
+          });
       }, 200); // Small delay to ensure order is accepted first
     }
   };
