@@ -1,8 +1,14 @@
 node_modules/
 mobile/
+mobile/**
 client/
+client/**
 dist/
 .git/
 .DS_Store
 *.log
 .env.local
+*.md
+specifications.*
+.cursor/
+attached_assets/
