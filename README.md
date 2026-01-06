@@ -11,3 +11,4 @@ La documentation complète des spécifications fonctionnelles et techniques est 
 
 Toute implémentation doit respecter strictement ces spécifications. Les prochaines évolutions doivent mettre à jour ces fichiers pour rester aligné avec le produit.
 # Force Railway rebuild
+# Force rebuild Mon Jan  5 17:33:36 -10 2026
