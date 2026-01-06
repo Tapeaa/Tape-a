@@ -45,9 +45,9 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
 
     try {
+      // Only in development - skip static serving in production
       const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
+        process.cwd(),
         "client",
         "index.html",
       );
@@ -68,18 +68,15 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
-
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
-  }
-
-  app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // In production, we don't serve static files - this is an API-only backend
+  // The mobile app will call the API endpoints directly
+  console.log("[STATIC] Static file serving disabled - API-only backend");
+  
+  // Just return 404 for any non-API routes
+  app.use("*", (req, res) => {
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ error: "Endpoint not found" });
+    }
+    res.status(404).json({ error: "Not found - this is an API-only backend" });
   });
 }
