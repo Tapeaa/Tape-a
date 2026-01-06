@@ -412,7 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Get Stripe customer
                 const stripeCustomer = await dbStorage.getStripeCustomer(order.clientId);
                 
-                if (stripeCustomer) {
+                if (stripeCustomer && stripe) {
                   console.log(`[DEBUG] Found Stripe customer ${stripeCustomer.stripeCustomerId}`);
                   // Create and confirm PaymentIntent
                   // IMPORTANT: We use off_session: true to charge the saved card without user presence
