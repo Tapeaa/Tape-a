@@ -6,6 +6,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "sdkVersion": "54.0.0",
-    "platforms": ["ios", "android", "web"]
+    "platforms": ["ios", "android", "web"],
+    "icon": "./assets/logo.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
   }
 }

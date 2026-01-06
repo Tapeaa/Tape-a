@@ -106,6 +106,23 @@ export function getIO(): SocketIOServer {
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
+  // Helper function to get session ID from cookie or Authorization header (for mobile)
+  async function getClientSessionId(req: any): Promise<string | null> {
+    // Try cookie first (for web)
+    if (req.cookies?.clientSessionId) {
+      return req.cookies.clientSessionId;
+    }
+    
+    // Try Authorization header (for mobile)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      return token;
+    }
+    
+    return null;
+  }
+  
   // Initialize Socket.IO
   io = new SocketIOServer(httpServer, {
     cors: {
@@ -757,7 +774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertOrderSchema.parse(req.body);
       
       // Check if client is authenticated and link order to their account
-      const sessionId = req.cookies?.clientSessionId;
+      const sessionId = await getClientSessionId(req);
       let clientId: string | undefined = undefined;
       if (sessionId) {
         const session = await dbStorage.getClientSession(sessionId);
@@ -813,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get active order for authenticated client
   app.get("/api/orders/active/client", async (req, res) => {
-    const sessionId = req.cookies?.clientSessionId;
+    const sessionId = await getClientSessionId(req);
     if (!sessionId) {
       return res.json({ hasActiveOrder: false });
     }
@@ -1094,7 +1111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create session immediately
       const session = await dbStorage.createClientSession(client.id);
       
-      // Set session cookie
+      // Set session cookie (for web)
       res.cookie("clientSessionId", session.id, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -1103,7 +1120,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({ 
-        success: true, 
+        success: true,
+        token: session.id, // Return token for mobile apps
         client: {
           id: client.id,
           phone: client.phone,
@@ -1165,7 +1183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create session
       const session = await dbStorage.createClientSession(client.id);
       
-      // Set session cookie
+      // Set session cookie (for web)
       res.cookie("clientSessionId", session.id, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -1175,6 +1193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         success: true,
+        token: session.id, // Return token for mobile apps
         client: {
           id: client.id,
           phone: client.phone,
@@ -1225,7 +1244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create session
       const session = await dbStorage.createClientSession(client.id);
       
-      // Set session cookie
+      // Set session cookie (for web)
       res.cookie("clientSessionId", session.id, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -1235,6 +1254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         success: true,
+        token: session.id, // Return token for mobile apps
         client: {
           id: client.id,
           phone: client.phone,
@@ -1253,7 +1273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Logout
   app.post("/api/auth/logout", async (req, res) => {
-    const sessionId = req.cookies?.clientSessionId;
+    const sessionId = await getClientSessionId(req);
     if (sessionId) {
       await dbStorage.deleteClientSession(sessionId);
     }
@@ -1263,7 +1283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get current client (check session)
   app.get("/api/auth/me", async (req, res) => {
-    const sessionId = req.cookies?.clientSessionId;
+    const sessionId = await getClientSessionId(req);
     
     if (!sessionId) {
       return res.status(401).json({ error: "Non authentifié" });
@@ -1396,7 +1416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get client orders
   app.get("/api/client/orders", async (req, res) => {
-    const sessionId = req.cookies?.clientSessionId;
+    const sessionId = await getClientSessionId(req);
     
     if (!sessionId) {
       return res.status(401).json({ error: "Non authentifié" });
@@ -1414,7 +1434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update client profile
   app.patch("/api/client/profile", async (req, res) => {
     try {
-      const sessionId = req.cookies?.clientSessionId;
+      const sessionId = await getClientSessionId(req);
       
       if (!sessionId) {
         return res.status(401).json({ error: "Non authentifié" });
@@ -1464,7 +1484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get wallet transactions
   app.get("/api/client/wallet", async (req, res) => {
-    const sessionId = req.cookies?.clientSessionId;
+    const sessionId = await getClientSessionId(req);
     
     if (!sessionId) {
       return res.status(401).json({ error: "Non authentifié" });
@@ -1683,9 +1703,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ STRIPE PAYMENT ENDPOINTS ============
   
-  // Helper to get authenticated client from session cookie
+  // Helper to get authenticated client from session cookie or token
   async function getAuthenticatedClient(req: any): Promise<string | null> {
-    const sessionId = req.cookies?.clientSessionId;
+    const sessionId = await getClientSessionId(req);
     if (!sessionId) return null;
     
     const session = await dbStorage.getClientSession(sessionId);
