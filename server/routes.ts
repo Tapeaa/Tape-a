@@ -10,9 +10,22 @@ import { verifyPassword, hashPassword, dbStorage } from "./db-storage";
 import { insertOrderSchema, pushSubscriptionSchema, insertClientSchema, type Order, type OrderStatus } from "@shared/schema";
 import cookieParser from "cookie-parser";
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+// Initialize Stripe (optional - only if key is provided)
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || "";
+const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
+
+if (!stripe) {
+  console.warn("[STRIPE] Stripe secret key not configured - payment features disabled");
+}
+
+// Helper function to check if Stripe is available
+function requireStripe() {
+  if (!stripe) {
+    throw new Error("Stripe non configuré");
+  }
+  return stripe;
+}
 
 // Validation schemas for profile updates
 const updateClientProfileSchema = z.object({
@@ -1739,6 +1752,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get or create Stripe customer for authenticated client
   app.post("/api/stripe/customer", async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ error: "Stripe non configuré" });
+    }
+    
     const authClientId = await getAuthenticatedClient(req);
     if (!authClientId) {
       return res.status(401).json({ error: "Non authentifié" });
